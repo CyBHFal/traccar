@@ -127,13 +127,30 @@ public class FilterHandler extends BaseDataHandler {
         return false;
     }
 
-    private boolean skipAttributes(Position position) {
+
+    private boolean skipAttributes(Position position, Position last) {
         if (skipAttributes) {
             String attributesString = Context.getIdentityManager().lookupAttributeString(
                     position.getDeviceId(), "filter.skipAttributes", "", false, true);
             for (String attribute : attributesString.split("[ ,]")) {
+                boolean compare=false;
+                if(attribute.startsWith("=")) {
+                    compare=true;
+                    attribute=attribute.substring(1);
+                }
                 if (position.getAttributes().containsKey(attribute)) {
-                    return true;
+                    if(compare) {
+                        /* attribute is always present, check for changes */
+                        if (last.getAttributes().containsKey(attribute)) {
+                            Object previous=last.getAttributes().get(attribute);
+                            Object value=position.getAttributes().get(attribute);
+                            if((previous!=null) && (value!=null) && previous.getClass().equals(value.getClass()) && (!previous.equals(value))) {
+                                return true;
+                            }
+                        }
+                    } else {
+                        return true;
+                    }
                 }
             }
         }
@@ -155,7 +172,7 @@ public class FilterHandler extends BaseDataHandler {
         if (filterZero(position)) {
             filterType.append("Zero ");
         }
-        if (filterDuplicate(position, last) && !skipLimit(position, last) && !skipAttributes(position)) {
+        if (filterDuplicate(position, last) && !skipLimit(position, last) && !skipAttributes(position, last)) {
             filterType.append("Duplicate ");
         }
         if (filterFuture(position)) {
@@ -167,10 +184,10 @@ public class FilterHandler extends BaseDataHandler {
         if (filterApproximate(position)) {
             filterType.append("Approximate ");
         }
-        if (filterStatic(position) && !skipLimit(position, last) && !skipAttributes(position)) {
+        if (filterStatic(position) && !skipLimit(position, last) && !skipAttributes(position, last)) {
             filterType.append("Static ");
         }
-        if (filterDistance(position, last) && !skipLimit(position, last) && !skipAttributes(position)) {
+        if (filterDistance(position, last) && !skipLimit(position, last) && !skipAttributes(position, last)) {
             filterType.append("Distance ");
         }
         if (filterMaxSpeed(position, last)) {
